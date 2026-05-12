@@ -79,10 +79,14 @@ void SdlInputHandler::handleMouseMotionEvent(SDL_MouseMotionEvent* event)
         return;
     }
 
-    // Batch all pending mouse motion events to save CPU time
+    // Batch consecutive mouse motion events to save CPU time, but don't skip
+    // over other mouse events. Preserving ordering is important for desktop
+    // mouse mode where wheel and button events are position-sensitive.
     Sint32 x = event->x, y = event->y, xrel = event->xrel, yrel = event->yrel;
     SDL_Event nextEvent;
-    while (SDL_PeepEvents(&nextEvent, 1, SDL_GETEVENT, SDL_MOUSEMOTION, SDL_MOUSEMOTION) > 0) {
+    while (SDL_PeepEvents(&nextEvent, 1, SDL_PEEKEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT) > 0 &&
+           nextEvent.type == SDL_MOUSEMOTION &&
+           SDL_PeepEvents(&nextEvent, 1, SDL_GETEVENT, SDL_MOUSEMOTION, SDL_MOUSEMOTION) > 0) {
         event = &nextEvent.motion;
 
         // Ignore synthetic mouse events
